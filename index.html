@@ -2,22 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Factory QR Scanner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.4/jsQR.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: Arial, sans-serif;
             background: #f0f0f0;
             padding: 10px;
         }
-        
+
         .container {
             max-width: 600px;
             margin: 0 auto;
@@ -26,29 +22,18 @@
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 20px;
-        }
-        
+
+        h1 { text-align: center; color: #333; margin-bottom: 20px; }
+
         .section {
             margin-bottom: 20px;
             border-bottom: 1px solid #ddd;
             padding-bottom: 20px;
         }
-        
-        .section:last-child {
-            border-bottom: none;
-        }
-        
-        h2 {
-            font-size: 16px;
-            color: #555;
-            margin-bottom: 10px;
-        }
-        
+        .section:last-child { border-bottom: none; }
+
+        h2 { font-size: 16px; color: #555; margin-bottom: 10px; }
+
         button {
             padding: 12px;
             font-size: 16px;
@@ -61,59 +46,62 @@
             margin-bottom: 10px;
             font-weight: bold;
         }
-        
-        button:hover {
-            background: #0056b3;
-        }
-        
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .btn-danger {
-            background: #dc3545;
-        }
-        
-        .btn-danger:hover {
-            background: #c82333;
-        }
-        
-        .btn-success {
-            background: #28a745;
-        }
-        
-        .btn-success:hover {
-            background: #218838;
-        }
-        
-        #cameraView {
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+
+        /* Camera wrapper with overlay */
+        .camera-wrapper {
+            position: relative;
             width: 100%;
-            border-radius: 5px;
+            display: none;
             margin-bottom: 10px;
             background: #000;
-            display: none;
+            border-radius: 5px;
+            overflow: hidden;
         }
-        
-        canvas {
-            display: none;
+
+        #cameraView {
+            width: 100%;
+            display: block;
+            border-radius: 5px;
         }
-        
+
+        /* Scanning overlay canvas */
+        #overlayCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #scanStatus {
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+            min-height: 20px;
+        }
+
+        #scanStatus.detected {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        canvas#processCanvas { display: none; }
+
         .input-group {
             display: flex;
             gap: 10px;
             margin-bottom: 10px;
         }
-        
-        .input-group input {
-            flex: 1;
-        }
-        
-        .input-group button {
-            flex: 0.25;
-            margin: 0;
-        }
-        
+        .input-group input { flex: 1; }
+        .input-group button { flex: 0.25; margin: 0; }
+
         input {
             padding: 10px;
             font-size: 16px;
@@ -121,12 +109,8 @@
             border-radius: 5px;
             width: 100%;
         }
-        
-        input:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-        
+        input:focus { outline: none; border-color: #007bff; }
+
         .counter {
             font-size: 32px;
             font-weight: bold;
@@ -137,7 +121,7 @@
             border-radius: 5px;
             margin-bottom: 15px;
         }
-        
+
         #itemsList {
             max-height: 250px;
             overflow-y: auto;
@@ -147,7 +131,7 @@
             background: #f8f9fa;
             margin-bottom: 10px;
         }
-        
+
         .item {
             background: white;
             padding: 10px;
@@ -159,17 +143,9 @@
             border-left: 4px solid #007bff;
             font-size: 14px;
         }
-        
-        .item-id {
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .item-time {
-            font-size: 12px;
-            color: #999;
-        }
-        
+        .item-id { font-weight: bold; color: #333; }
+        .item-time { font-size: 12px; color: #999; }
+
         .remove-btn {
             background: #dc3545 !important;
             padding: 5px 10px !important;
@@ -177,44 +153,39 @@
             width: auto !important;
             font-size: 12px !important;
         }
-        
-        .remove-btn:hover {
-            background: #c82333 !important;
+        .remove-btn:hover { background: #c82333 !important; }
+
+        .empty { text-align: center; color: #999; padding: 20px; font-size: 14px; }
+
+        .button-row { display: flex; gap: 10px; }
+        .button-row button { flex: 1; margin: 0; }
+
+        /* Cooldown flash */
+        .flash {
+            animation: flash 0.3s ease;
         }
-        
-        .empty {
-            text-align: center;
-            color: #999;
-            padding: 20px;
-            font-size: 14px;
-        }
-        
-        .button-row {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .button-row button {
-            flex: 1;
-            margin: 0;
+        @keyframes flash {
+            0% { background: #d4edda; }
+            100% { background: white; }
         }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1>🏭 QR Scanner</h1>
-    
-    <!-- Camera Section -->
+
     <div class="section">
         <h2>📷 Scan QR Code</h2>
         <button id="startBtn" onclick="startScanning()">Start Camera</button>
         <button id="stopBtn" onclick="stopScanning()" style="display:none;">Stop Camera</button>
-        <canvas id="canvas"></canvas>
-        <video id="cameraView" playsinline></video>
+        <div id="scanStatus"></div>
+        <div class="camera-wrapper" id="cameraWrapper">
+            <video id="cameraView" playsinline autoplay muted></video>
+            <canvas id="overlayCanvas"></canvas>
+        </div>
+        <canvas id="processCanvas"></canvas>
     </div>
-    
-    <!-- Manual Entry -->
+
     <div class="section">
         <h2>✏️ Manual Entry</h2>
         <div class="input-group">
@@ -222,20 +193,17 @@
             <button onclick="addItem()" style="flex: 0.2;">Add</button>
         </div>
     </div>
-    
-    <!-- Counter -->
+
     <div class="section">
         <h2>📊 Total Items</h2>
         <div class="counter" id="counter">0</div>
     </div>
-    
-    <!-- List -->
+
     <div class="section">
         <h2>📋 Items List</h2>
         <div id="itemsList" class="empty">No items scanned yet</div>
     </div>
-    
-    <!-- Download -->
+
     <div class="section">
         <div class="button-row">
             <button class="btn-success" onclick="downloadCSV()">Download CSV</button>
@@ -247,35 +215,42 @@
 <script>
 let items = [];
 let isScanning = false;
-let scanLoop;
+let scanInterval = null;
+let lastScanned = '';
+let cooldown = false;
 
 const video = document.getElementById('cameraView');
-const canvas = document.getElementById('canvas');
+const processCanvas = document.getElementById('processCanvas');
+const overlayCanvas = document.getElementById('overlayCanvas');
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
-const productId = document.getElementById('productId');
-const counter = document.getElementById('counter');
-const itemsList = document.getElementById('itemsList');
+const cameraWrapper = document.getElementById('cameraWrapper');
+const scanStatus = document.getElementById('scanStatus');
 
 function startScanning() {
-    navigator.mediaDevices.getUserMedia({ 
-        video: { 
-            facingMode: 'environment',
+    const constraints = {
+        video: {
+            facingMode: { ideal: 'environment' },
             width: { ideal: 1280 },
             height: { ideal: 720 }
-        } 
-    })
+        }
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
     .then(stream => {
         video.srcObject = stream;
-        video.style.display = 'block';
+        cameraWrapper.style.display = 'block';
         startBtn.style.display = 'none';
         stopBtn.style.display = 'block';
         isScanning = true;
-        
-        video.onloadedmetadata = () => {
-            video.play();
-            scan();
-        };
+        scanStatus.textContent = 'Point camera at a QR code...';
+
+        video.addEventListener('loadedmetadata', () => {
+            video.play().then(() => {
+                // Use interval instead of requestAnimationFrame — more reliable on mobile
+                scanInterval = setInterval(scanFrame, 200); // scan 5x per second
+            });
+        });
     })
     .catch(err => {
         alert('Camera Error: ' + err.message + '\n\nMake sure you allowed camera permission.');
@@ -284,46 +259,97 @@ function startScanning() {
 
 function stopScanning() {
     isScanning = false;
+    if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
     if (video.srcObject) {
         video.srcObject.getTracks().forEach(track => track.stop());
     }
-    video.style.display = 'none';
+    cameraWrapper.style.display = 'none';
     startBtn.style.display = 'block';
     stopBtn.style.display = 'none';
-    if (scanLoop) cancelAnimationFrame(scanLoop);
+    scanStatus.textContent = '';
+
+    // Clear overlay
+    const ctx = overlayCanvas.getContext('2d');
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 }
 
-function scan() {
-    if (!isScanning) return;
-    
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-        
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, canvas.width, canvas.height);
-        
-        if (code) {
+function scanFrame() {
+    if (!isScanning || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return;
+
+    // Process canvas (hidden, full resolution for accuracy)
+    processCanvas.width = vw;
+    processCanvas.height = vh;
+    const ctx = processCanvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, vw, vh);
+
+    const imageData = ctx.getImageData(0, 0, vw, vh);
+    const code = jsQR(imageData.data, vw, vh, {
+        inversionAttempts: 'dontInvert'
+    });
+
+    // Sync overlay canvas to video element's display size
+    overlayCanvas.width = video.offsetWidth;
+    overlayCanvas.height = video.offsetHeight;
+    const octx = overlayCanvas.getContext('2d');
+    octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    if (code) {
+        // Draw green box around QR code scaled to display size
+        const scaleX = overlayCanvas.width / vw;
+        const scaleY = overlayCanvas.height / vh;
+
+        const pts = [
+            code.location.topLeftCorner,
+            code.location.topRightCorner,
+            code.location.bottomRightCorner,
+            code.location.bottomLeftCorner
+        ];
+
+        octx.beginPath();
+        octx.moveTo(pts[0].x * scaleX, pts[0].y * scaleY);
+        for (let i = 1; i < pts.length; i++) {
+            octx.lineTo(pts[i].x * scaleX, pts[i].y * scaleY);
+        }
+        octx.closePath();
+        octx.strokeStyle = '#00ff00';
+        octx.lineWidth = 3;
+        octx.stroke();
+
+        scanStatus.textContent = '✅ QR Code detected!';
+        scanStatus.className = 'detected';
+
+        if (!cooldown && code.data !== lastScanned) {
+            lastScanned = code.data;
+            cooldown = true;
             addItem(code.data);
+            // Vibrate on mobile if supported
+            if (navigator.vibrate) navigator.vibrate(100);
+            setTimeout(() => {
+                cooldown = false;
+                lastScanned = '';
+                scanStatus.textContent = 'Point camera at a QR code...';
+                scanStatus.className = '';
+            }, 2000);
+        }
+    } else {
+        if (!cooldown) {
+            scanStatus.textContent = 'Point camera at a QR code...';
+            scanStatus.className = '';
         }
     }
-    
-    scanLoop = requestAnimationFrame(scan);
 }
 
 function addItem(id) {
-    id = id || productId.value.trim();
-    
-    if (!id) {
-        alert('Please enter or scan a Product ID');
-        return;
-    }
-    
+    id = id || document.getElementById('productId').value.trim();
+    if (!id) { alert('Please enter or scan a Product ID'); return; }
+
     const timestamp = new Date().toLocaleString();
     items.push({ id, timestamp });
-    productId.value = '';
+    document.getElementById('productId').value = '';
     updateDisplay();
 }
 
@@ -333,43 +359,40 @@ function removeItem(index) {
 }
 
 function updateDisplay() {
-    counter.textContent = items.length;
-    
+    document.getElementById('counter').textContent = items.length;
+
     if (items.length === 0) {
-        itemsList.innerHTML = '<div class="empty">No items scanned yet</div>';
+        document.getElementById('itemsList').innerHTML = '<div class="empty">No items scanned yet</div>';
         return;
     }
-    
+
     let html = '';
     items.forEach((item, idx) => {
         html += `
-            <div class="item">
+            <div class="item" id="item-${idx}">
                 <div>
                     <div class="item-id">${item.id}</div>
                     <div class="item-time">${item.timestamp}</div>
                 </div>
                 <button class="remove-btn" onclick="removeItem(${idx})">Delete</button>
-            </div>
-        `;
+            </div>`;
     });
-    itemsList.innerHTML = html;
+    document.getElementById('itemsList').innerHTML = html;
+
+    // Flash latest item
+    const latest = document.getElementById(`item-${items.length - 1}`);
+    if (latest) latest.classList.add('flash');
 }
 
 function downloadCSV() {
-    if (items.length === 0) {
-        alert('No items to download');
-        return;
-    }
-    
+    if (items.length === 0) { alert('No items to download'); return; }
+
     let csv = 'Product ID,Timestamp\n';
-    items.forEach(item => {
-        csv += `"${item.id}","${item.timestamp}"\n`;
-    });
-    
+    items.forEach(item => { csv += `"${item.id}","${item.timestamp}"\n`; });
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
+    link.setAttribute('href', URL.createObjectURL(blob));
     link.setAttribute('download', `scan_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
@@ -378,14 +401,10 @@ function downloadCSV() {
 }
 
 function clearData() {
-    if (confirm('Delete all items?')) {
-        items = [];
-        updateDisplay();
-    }
+    if (confirm('Delete all items?')) { items = []; updateDisplay(); }
 }
 
 updateDisplay();
 </script>
-
 </body>
 </html>
