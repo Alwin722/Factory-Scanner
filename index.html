@@ -7,167 +7,36 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.4/jsQR.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: Arial, sans-serif;
-            background: #f0f0f0;
-            padding: 10px;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
+        body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 10px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #333; margin-bottom: 20px; }
-
-        .section {
-            margin-bottom: 20px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 20px;
-        }
+        .section { margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
         .section:last-child { border-bottom: none; }
-
         h2 { font-size: 16px; color: #555; margin-bottom: 10px; }
-
-        button {
-            padding: 12px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            background: #007bff;
-            color: white;
-            width: 100%;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
+        button { padding: 12px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; background: #007bff; color: white; width: 100%; margin-bottom: 10px; font-weight: bold; }
         button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
         .btn-danger { background: #dc3545; }
         .btn-danger:hover { background: #c82333; }
         .btn-success { background: #28a745; }
         .btn-success:hover { background: #218838; }
-
-        /* Camera wrapper with overlay */
-        .camera-wrapper {
-            position: relative;
-            width: 100%;
-            display: none;
-            margin-bottom: 10px;
-            background: #000;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        #cameraView {
-            width: 100%;
-            display: block;
-            border-radius: 5px;
-        }
-
-        /* Scanning overlay canvas */
-        #overlayCanvas {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        #scanStatus {
-            text-align: center;
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 8px;
-            min-height: 20px;
-        }
-
-        #scanStatus.detected {
-            color: #28a745;
-            font-weight: bold;
-        }
-
-        canvas#processCanvas { display: none; }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
+        #scannerCanvas { width: 100%; border-radius: 5px; display: none; margin-bottom: 10px; background: #000; }
+        #statusMsg { text-align: center; padding: 8px; font-size: 14px; color: #555; background: #f8f9fa; border-radius: 5px; margin-bottom: 10px; display: none; }
+        #statusMsg.found { background: #d4edda; color: #155724; font-weight: bold; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .input-group input { flex: 1; }
-        .input-group button { flex: 0.25; margin: 0; }
-
-        input {
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            width: 100%;
-        }
+        .input-group button { flex: 0.2; margin: 0; }
+        input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; width: 100%; }
         input:focus { outline: none; border-color: #007bff; }
-
-        .counter {
-            font-size: 32px;
-            font-weight: bold;
-            text-align: center;
-            color: #007bff;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
-
-        #itemsList {
-            max-height: 250px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-            background: #f8f9fa;
-            margin-bottom: 10px;
-        }
-
-        .item {
-            background: white;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 4px solid #007bff;
-            font-size: 14px;
-        }
-        .item-id { font-weight: bold; color: #333; }
+        .counter { font-size: 32px; font-weight: bold; text-align: center; color: #007bff; padding: 15px; background: #f8f9fa; border-radius: 5px; margin-bottom: 15px; }
+        #itemsList { max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px; background: #f8f9fa; margin-bottom: 10px; }
+        .item { background: white; padding: 10px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #007bff; font-size: 14px; }
+        .item-id { font-weight: bold; color: #333; word-break: break-all; }
         .item-time { font-size: 12px; color: #999; }
-
-        .remove-btn {
-            background: #dc3545 !important;
-            padding: 5px 10px !important;
-            margin: 0 !important;
-            width: auto !important;
-            font-size: 12px !important;
-        }
-        .remove-btn:hover { background: #c82333 !important; }
-
+        .remove-btn { background: #dc3545 !important; padding: 5px 10px !important; margin: 0 !important; width: auto !important; font-size: 12px !important; white-space: nowrap; }
         .empty { text-align: center; color: #999; padding: 20px; font-size: 14px; }
-
         .button-row { display: flex; gap: 10px; }
         .button-row button { flex: 1; margin: 0; }
-
-        /* Cooldown flash */
-        .flash {
-            animation: flash 0.3s ease;
-        }
-        @keyframes flash {
-            0% { background: #d4edda; }
-            100% { background: white; }
-        }
+        video { display: none; }
     </style>
 </head>
 <body>
@@ -178,19 +47,16 @@
         <h2>📷 Scan QR Code</h2>
         <button id="startBtn" onclick="startScanning()">Start Camera</button>
         <button id="stopBtn" onclick="stopScanning()" style="display:none;">Stop Camera</button>
-        <div id="scanStatus"></div>
-        <div class="camera-wrapper" id="cameraWrapper">
-            <video id="cameraView" playsinline autoplay muted></video>
-            <canvas id="overlayCanvas"></canvas>
-        </div>
-        <canvas id="processCanvas"></canvas>
+        <div id="statusMsg">Initialising...</div>
+        <canvas id="scannerCanvas"></canvas>
+        <video id="video" playsinline autoplay muted></video>
     </div>
 
     <div class="section">
         <h2>✏️ Manual Entry</h2>
         <div class="input-group">
             <input type="text" id="productId" placeholder="Enter Product ID" onkeypress="if(event.key==='Enter') addItem()">
-            <button onclick="addItem()" style="flex: 0.2;">Add</button>
+            <button onclick="addItem()">Add</button>
         </div>
     </div>
 
@@ -201,7 +67,7 @@
 
     <div class="section">
         <h2>📋 Items List</h2>
-        <div id="itemsList" class="empty">No items scanned yet</div>
+        <div id="itemsList"><div class="empty">No items scanned yet</div></div>
     </div>
 
     <div class="section">
@@ -213,142 +79,115 @@
 </div>
 
 <script>
-let items = [];
-let isScanning = false;
-let scanInterval = null;
-let lastScanned = '';
-let cooldown = false;
+var items = [];
+var scanning = false;
+var timer = null;
+var cooldown = false;
+var lastCode = '';
 
-const video = document.getElementById('cameraView');
-const processCanvas = document.getElementById('processCanvas');
-const overlayCanvas = document.getElementById('overlayCanvas');
-const startBtn = document.getElementById('startBtn');
-const stopBtn = document.getElementById('stopBtn');
-const cameraWrapper = document.getElementById('cameraWrapper');
-const scanStatus = document.getElementById('scanStatus');
+var video = document.getElementById('video');
+var canvas = document.getElementById('scannerCanvas');
+var ctx = canvas.getContext('2d');
+var statusMsg = document.getElementById('statusMsg');
 
 function startScanning() {
-    const constraints = {
-        video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-        }
-    };
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Camera not supported on this browser.');
+        return;
+    }
 
-    navigator.mediaDevices.getUserMedia(constraints)
-    .then(stream => {
-        video.srcObject = stream;
-        cameraWrapper.style.display = 'block';
-        startBtn.style.display = 'none';
-        stopBtn.style.display = 'block';
-        isScanning = true;
-        scanStatus.textContent = 'Point camera at a QR code...';
-
-        video.addEventListener('loadedmetadata', () => {
-            video.play().then(() => {
-                // Use interval instead of requestAnimationFrame — more reliable on mobile
-                scanInterval = setInterval(scanFrame, 200); // scan 5x per second
-            });
-        });
+    navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } }
     })
-    .catch(err => {
-        alert('Camera Error: ' + err.message + '\n\nMake sure you allowed camera permission.');
+    .then(function(stream) {
+        video.srcObject = stream;
+        video.play();
+
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('stopBtn').style.display = 'block';
+        canvas.style.display = 'block';
+        statusMsg.style.display = 'block';
+        statusMsg.className = '';
+        statusMsg.textContent = 'Camera starting...';
+        scanning = true;
+
+        video.oncanplay = function() {
+            statusMsg.textContent = 'Scanning... point at a QR code';
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            if (timer) clearInterval(timer);
+            timer = setInterval(tick, 250);
+        };
+    })
+    .catch(function(err) {
+        alert('Camera error: ' + err.message);
     });
+}
+
+function tick() {
+    if (!scanning) return;
+    if (video.readyState < 2) return;
+
+    var w = video.videoWidth;
+    var h = video.videoHeight;
+    if (!w || !h) return;
+
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+
+    ctx.drawImage(video, 0, 0, w, h);
+
+    var imageData = ctx.getImageData(0, 0, w, h);
+    var code = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
+
+    if (code && code.data) {
+        var loc = code.location;
+        ctx.beginPath();
+        ctx.moveTo(loc.topLeftCorner.x, loc.topLeftCorner.y);
+        ctx.lineTo(loc.topRightCorner.x, loc.topRightCorner.y);
+        ctx.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
+        ctx.lineTo(loc.bottomLeftCorner.x, loc.bottomLeftCorner.y);
+        ctx.closePath();
+        ctx.lineWidth = Math.max(4, w / 100);
+        ctx.strokeStyle = '#00ff00';
+        ctx.stroke();
+
+        statusMsg.className = 'found';
+        statusMsg.textContent = '✅ Found: ' + code.data;
+
+        if (!cooldown && code.data !== lastCode) {
+            lastCode = code.data;
+            cooldown = true;
+            addItem(code.data);
+            if (navigator.vibrate) navigator.vibrate(150);
+            setTimeout(function() {
+                cooldown = false;
+                lastCode = '';
+                statusMsg.className = '';
+                statusMsg.textContent = 'Scanning... point at a QR code';
+            }, 2500);
+        }
+    }
 }
 
 function stopScanning() {
-    isScanning = false;
-    if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+    scanning = false;
+    if (timer) { clearInterval(timer); timer = null; }
     if (video.srcObject) {
-        video.srcObject.getTracks().forEach(track => track.stop());
+        video.srcObject.getTracks().forEach(function(t) { t.stop(); });
+        video.srcObject = null;
     }
-    cameraWrapper.style.display = 'none';
-    startBtn.style.display = 'block';
-    stopBtn.style.display = 'none';
-    scanStatus.textContent = '';
-
-    // Clear overlay
-    const ctx = overlayCanvas.getContext('2d');
-    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-}
-
-function scanFrame() {
-    if (!isScanning || video.readyState !== video.HAVE_ENOUGH_DATA) return;
-
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    if (!vw || !vh) return;
-
-    // Process canvas (hidden, full resolution for accuracy)
-    processCanvas.width = vw;
-    processCanvas.height = vh;
-    const ctx = processCanvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, vw, vh);
-
-    const imageData = ctx.getImageData(0, 0, vw, vh);
-    const code = jsQR(imageData.data, vw, vh, {
-        inversionAttempts: 'dontInvert'
-    });
-
-    // Sync overlay canvas to video element's display size
-    overlayCanvas.width = video.offsetWidth;
-    overlayCanvas.height = video.offsetHeight;
-    const octx = overlayCanvas.getContext('2d');
-    octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-    if (code) {
-        // Draw green box around QR code scaled to display size
-        const scaleX = overlayCanvas.width / vw;
-        const scaleY = overlayCanvas.height / vh;
-
-        const pts = [
-            code.location.topLeftCorner,
-            code.location.topRightCorner,
-            code.location.bottomRightCorner,
-            code.location.bottomLeftCorner
-        ];
-
-        octx.beginPath();
-        octx.moveTo(pts[0].x * scaleX, pts[0].y * scaleY);
-        for (let i = 1; i < pts.length; i++) {
-            octx.lineTo(pts[i].x * scaleX, pts[i].y * scaleY);
-        }
-        octx.closePath();
-        octx.strokeStyle = '#00ff00';
-        octx.lineWidth = 3;
-        octx.stroke();
-
-        scanStatus.textContent = '✅ QR Code detected!';
-        scanStatus.className = 'detected';
-
-        if (!cooldown && code.data !== lastScanned) {
-            lastScanned = code.data;
-            cooldown = true;
-            addItem(code.data);
-            // Vibrate on mobile if supported
-            if (navigator.vibrate) navigator.vibrate(100);
-            setTimeout(() => {
-                cooldown = false;
-                lastScanned = '';
-                scanStatus.textContent = 'Point camera at a QR code...';
-                scanStatus.className = '';
-            }, 2000);
-        }
-    } else {
-        if (!cooldown) {
-            scanStatus.textContent = 'Point camera at a QR code...';
-            scanStatus.className = '';
-        }
-    }
+    canvas.style.display = 'none';
+    statusMsg.style.display = 'none';
+    document.getElementById('startBtn').style.display = 'block';
+    document.getElementById('stopBtn').style.display = 'none';
 }
 
 function addItem(id) {
     id = id || document.getElementById('productId').value.trim();
     if (!id) { alert('Please enter or scan a Product ID'); return; }
-
-    const timestamp = new Date().toLocaleString();
-    items.push({ id, timestamp });
+    var timestamp = new Date().toLocaleString();
+    items.push({ id: id, timestamp: timestamp });
     document.getElementById('productId').value = '';
     updateDisplay();
 }
@@ -360,41 +199,26 @@ function removeItem(index) {
 
 function updateDisplay() {
     document.getElementById('counter').textContent = items.length;
-
     if (items.length === 0) {
         document.getElementById('itemsList').innerHTML = '<div class="empty">No items scanned yet</div>';
         return;
     }
-
-    let html = '';
-    items.forEach((item, idx) => {
-        html += `
-            <div class="item" id="item-${idx}">
-                <div>
-                    <div class="item-id">${item.id}</div>
-                    <div class="item-time">${item.timestamp}</div>
-                </div>
-                <button class="remove-btn" onclick="removeItem(${idx})">Delete</button>
-            </div>`;
+    var html = '';
+    items.forEach(function(item, idx) {
+        html += '<div class="item"><div><div class="item-id">' + item.id + '</div><div class="item-time">' + item.timestamp + '</div></div><button class="remove-btn" onclick="removeItem(' + idx + ')">Delete</button></div>';
     });
     document.getElementById('itemsList').innerHTML = html;
-
-    // Flash latest item
-    const latest = document.getElementById(`item-${items.length - 1}`);
-    if (latest) latest.classList.add('flash');
 }
 
 function downloadCSV() {
     if (items.length === 0) { alert('No items to download'); return; }
-
-    let csv = 'Product ID,Timestamp\n';
-    items.forEach(item => { csv += `"${item.id}","${item.timestamp}"\n`; });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.setAttribute('href', URL.createObjectURL(blob));
-    link.setAttribute('download', `scan_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    var csv = 'Product ID,Timestamp\n';
+    items.forEach(function(item) { csv += '"' + item.id + '","' + item.timestamp + '"\n'; });
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'scan_' + new Date().toISOString().split('T')[0] + '.csv';
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -403,8 +227,6 @@ function downloadCSV() {
 function clearData() {
     if (confirm('Delete all items?')) { items = []; updateDisplay(); }
 }
-
-updateDisplay();
 </script>
 </body>
 </html>
