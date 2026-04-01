@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Factory QR Scanner</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.4/jsQR.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 10px; }
@@ -16,12 +15,12 @@
         button { padding: 12px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; background: #007bff; color: white; width: 100%; margin-bottom: 10px; font-weight: bold; }
         button:hover { background: #0056b3; }
         .btn-danger { background: #dc3545; }
-        .btn-danger:hover { background: #c82333; }
         .btn-success { background: #28a745; }
-        .btn-success:hover { background: #218838; }
-        #scannerCanvas { width: 100%; border-radius: 5px; display: none; margin-bottom: 10px; background: #000; }
+        .camera-box { position: relative; display: none; margin-bottom: 10px; background: #000; border-radius: 8px; overflow: hidden; }
+        #video { width: 100%; display: block; }
         #statusMsg { text-align: center; padding: 8px; font-size: 14px; color: #555; background: #f8f9fa; border-radius: 5px; margin-bottom: 10px; display: none; }
         #statusMsg.found { background: #d4edda; color: #155724; font-weight: bold; }
+        #statusMsg.error { background: #f8d7da; color: #721c24; }
         .input-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .input-group input { flex: 1; }
         .input-group button { flex: 0.2; margin: 0; }
@@ -36,7 +35,7 @@
         .empty { text-align: center; color: #999; padding: 20px; font-size: 14px; }
         .button-row { display: flex; gap: 10px; }
         .button-row button { flex: 1; margin: 0; }
-        video { display: none; }
+        canvas { display: none; }
     </style>
 </head>
 <body>
@@ -47,9 +46,11 @@
         <h2>📷 Scan QR Code</h2>
         <button id="startBtn" onclick="startScanning()">Start Camera</button>
         <button id="stopBtn" onclick="stopScanning()" style="display:none;">Stop Camera</button>
-        <div id="statusMsg">Initialising...</div>
-        <canvas id="scannerCanvas"></canvas>
-        <video id="video" playsinline autoplay muted></video>
+        <div id="statusMsg"></div>
+        <div class="camera-box" id="cameraBox">
+            <video id="video" playsinline autoplay muted></video>
+        </div>
+        <canvas id="canvas"></canvas>
     </div>
 
     <div class="section">
@@ -78,124 +79,86 @@
     </div>
 </div>
 
-<script>
+<script type="module">
+import { BrowserMultiFormatReader } from 'https://esm.sh/@zxing/browser@0.1.5';
+import { NotFoundException } from 'https://esm.sh/@zxing/library@0.21.3';
+
 var items = [];
-var scanning = false;
-var timer = null;
-var cooldown = false;
-var lastCode = '';
+var reader = null;
+var controls = null;
 
 var video = document.getElementById('video');
-var canvas = document.getElementById('scannerCanvas');
-var ctx = canvas.getContext('2d');
 var statusMsg = document.getElementById('statusMsg');
+var cameraBox = document.getElementById('cameraBox');
 
-function startScanning() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Camera not supported on this browser.');
-        return;
-    }
+function setStatus(msg, cls) {
+    statusMsg.style.display = 'block';
+    statusMsg.textContent = msg;
+    statusMsg.className = cls || '';
+}
 
-    navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } }
-    })
-    .then(function(stream) {
-        video.srcObject = stream;
-        video.play();
+window.startScanning = async function() {
+    try {
+        reader = new BrowserMultiFormatReader();
+
+        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+        // Prefer back camera
+        let deviceId = devices.length > 0 ? devices[0].deviceId : undefined;
+        for (var d of devices) {
+            if (d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear') || d.label.toLowerCase().includes('environment')) {
+                deviceId = d.deviceId;
+                break;
+            }
+        }
 
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('stopBtn').style.display = 'block';
-        canvas.style.display = 'block';
-        statusMsg.style.display = 'block';
-        statusMsg.className = '';
-        statusMsg.textContent = 'Camera starting...';
-        scanning = true;
+        cameraBox.style.display = 'block';
+        setStatus('📷 Scanning... point at a QR code');
 
-        video.oncanplay = function() {
-            statusMsg.textContent = 'Scanning... point at a QR code';
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
-            if (timer) clearInterval(timer);
-            timer = setInterval(tick, 250);
-        };
-    })
-    .catch(function(err) {
-        alert('Camera error: ' + err.message);
-    });
-}
+        controls = await reader.decodeFromVideoDevice(deviceId, video, function(result, err) {
+            if (result) {
+                var text = result.getText();
+                setStatus('✅ Found: ' + text, 'found');
+                addItem(text);
+                if (navigator.vibrate) navigator.vibrate(150);
+                // Brief pause before next scan
+                setTimeout(function() {
+                    setStatus('📷 Scanning... point at a QR code');
+                }, 2000);
+            }
+            // NotFoundException just means no QR in frame — ignore it
+        });
 
-function tick() {
-    if (!scanning) return;
-    if (video.readyState < 2) return;
-
-    var w = video.videoWidth;
-    var h = video.videoHeight;
-    if (!w || !h) return;
-
-    if (canvas.width !== w) canvas.width = w;
-    if (canvas.height !== h) canvas.height = h;
-
-    ctx.drawImage(video, 0, 0, w, h);
-
-    var imageData = ctx.getImageData(0, 0, w, h);
-    var code = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
-
-    if (code && code.data) {
-        var loc = code.location;
-        ctx.beginPath();
-        ctx.moveTo(loc.topLeftCorner.x, loc.topLeftCorner.y);
-        ctx.lineTo(loc.topRightCorner.x, loc.topRightCorner.y);
-        ctx.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
-        ctx.lineTo(loc.bottomLeftCorner.x, loc.bottomLeftCorner.y);
-        ctx.closePath();
-        ctx.lineWidth = Math.max(4, w / 100);
-        ctx.strokeStyle = '#00ff00';
-        ctx.stroke();
-
-        statusMsg.className = 'found';
-        statusMsg.textContent = '✅ Found: ' + code.data;
-
-        if (!cooldown && code.data !== lastCode) {
-            lastCode = code.data;
-            cooldown = true;
-            addItem(code.data);
-            if (navigator.vibrate) navigator.vibrate(150);
-            setTimeout(function() {
-                cooldown = false;
-                lastCode = '';
-                statusMsg.className = '';
-                statusMsg.textContent = 'Scanning... point at a QR code';
-            }, 2500);
-        }
+    } catch(err) {
+        setStatus('Camera error: ' + err.message, 'error');
+        console.error(err);
     }
-}
+};
 
-function stopScanning() {
-    scanning = false;
-    if (timer) { clearInterval(timer); timer = null; }
-    if (video.srcObject) {
-        video.srcObject.getTracks().forEach(function(t) { t.stop(); });
-        video.srcObject = null;
-    }
-    canvas.style.display = 'none';
+window.stopScanning = function() {
+    if (controls) { controls.stop(); controls = null; }
+    cameraBox.style.display = 'none';
     statusMsg.style.display = 'none';
     document.getElementById('startBtn').style.display = 'block';
     document.getElementById('stopBtn').style.display = 'none';
-}
+};
 
-function addItem(id) {
+window.addItem = function(id) {
     id = id || document.getElementById('productId').value.trim();
     if (!id) { alert('Please enter or scan a Product ID'); return; }
+    // Prevent duplicate within 3 seconds
+    if (items.length > 0 && items[items.length-1].id === id) return;
     var timestamp = new Date().toLocaleString();
     items.push({ id: id, timestamp: timestamp });
     document.getElementById('productId').value = '';
     updateDisplay();
-}
+};
 
-function removeItem(index) {
+window.removeItem = function(index) {
     items.splice(index, 1);
     updateDisplay();
-}
+};
 
 function updateDisplay() {
     document.getElementById('counter').textContent = items.length;
@@ -210,7 +173,7 @@ function updateDisplay() {
     document.getElementById('itemsList').innerHTML = html;
 }
 
-function downloadCSV() {
+window.downloadCSV = function() {
     if (items.length === 0) { alert('No items to download'); return; }
     var csv = 'Product ID,Timestamp\n';
     items.forEach(function(item) { csv += '"' + item.id + '","' + item.timestamp + '"\n'; });
@@ -222,11 +185,13 @@ function downloadCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-}
+};
 
-function clearData() {
+window.clearData = function() {
     if (confirm('Delete all items?')) { items = []; updateDisplay(); }
-}
+};
+
+updateDisplay();
 </script>
 </body>
 </html>
