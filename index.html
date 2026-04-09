@@ -588,8 +588,8 @@ function startCamera() {
     const constraints = {
         video: {
             facingMode: { ideal: 'environment' },
-            width:  { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
+            width:  { ideal: 1280 },
+            height: { ideal: 720 },
         }
     };
     navigator.mediaDevices.getUserMedia(constraints)
@@ -602,17 +602,22 @@ function startCamera() {
                 torchTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
             } catch(e) {}
 
-            video.play();
-            $('camPlaceholder').style.display = 'none';
-            $('startBtn').style.display = 'none';
-            $('stopBtn').style.display = '';
-            $('torchBtn').style.display = '';
-            $('scanOverlay').classList.add('active');
-            cameraActive = true;
-            sessionStart = Date.now();
-            updateSessionBadge();
-            setStatus('Scanning… point camera at QR code', 'active');
-            animFrame = requestAnimationFrame(scanLoop);
+            // Wait for video to be truly ready before scanning
+            video.onloadedmetadata = () => {
+                video.play().then(() => {
+                    $('camPlaceholder').style.display = 'none';
+                    $('startBtn').style.display = 'none';
+                    $('stopBtn').style.display = '';
+                    $('torchBtn').style.display = '';
+                    $('scanOverlay').classList.add('active');
+                    cameraActive = true;
+                    sessionStart = Date.now();
+                    updateSessionBadge();
+                    setStatus('Scanning… point camera at QR code', 'active');
+                    // Use setInterval for reliable Android Chrome timing
+                    animFrame = setInterval(scanLoop, 150);
+                });
+            };
         })
         .catch(err => {
             setStatus('Camera error: ' + err.message, 'error');
@@ -623,7 +628,7 @@ function startCamera() {
 function stopCamera() {
     if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
     cameraActive = false;
-    cancelAnimationFrame(animFrame);
+    clearInterval(animFrame);
     $('camPlaceholder').style.display = 'flex';
     $('startBtn').style.display = '';
     $('stopBtn').style.display = 'none';
@@ -737,57 +742,61 @@ function enhanceFrame(srcCanvas) {
 // ── Scan loop ──────────────────────────────────────────────────────────────
 function scanLoop() {
     if (!cameraActive) return;
+    if (video.readyState !== 4) return; // HAVE_ENOUGH_DATA only
+
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw || !vh) return;
+
+    // Downscale to max 640px wide for performance on mobile
+    const scale = Math.min(1, 640 / vw);
+    const w = Math.floor(vw * scale);
+    const h = Math.floor(vh * scale);
+
+    canvas.width = w; canvas.height = h;
+    ctx.drawImage(video, 0, 0, w, h);
 
     // FPS counter
     frameCount++;
     const now = Date.now();
     if (now - fpsTime >= 1000) {
-        $('fpsPill').textContent = frameCount + ' fps';
-        $('fpsPill').className = 'stat-pill' + (frameCount >= 20 ? ' good' : '');
+        $('fpsPill').textContent = frameCount + '/s';
+        $('fpsPill').className = 'stat-pill' + (frameCount >= 5 ? ' good' : '');
         frameCount = 0; fpsTime = now;
     }
 
-    if (video.readyState >= 2 && video.videoWidth > 0) {
-        const w = video.videoWidth, h = video.videoHeight;
-        canvas.width = w; canvas.height = h;
-        ctx.drawImage(video, 0, 0);
+    const raw = ctx.getImageData(0, 0, w, h);
+    let code = null;
 
-        const raw = ctx.getImageData(0, 0, w, h);
-        let code = null;
+    // Attempt A: raw, normal
+    code = jsQR(raw.data, w, h, { inversionAttempts: 'dontInvert' });
+    if (code) lastAttemptLabel = 'RAW';
 
-        // Attempt A: raw, normal
-        code = jsQR(raw.data, w, h, { inversionAttempts: 'dontInvert' });
-        if (code) { lastAttemptLabel = 'RAW'; }
-
-        // Attempt B: raw, inverted (white-on-dark)
-        if (!code) {
-            code = jsQR(raw.data, w, h, { inversionAttempts: 'onlyInvert' });
-            if (code) lastAttemptLabel = 'INV';
-        }
-
-        // Attempt C: enhanced
-        if (!code && $('enhToggle').checked) {
-            const enh = enhanceFrame(canvas);
-            code = jsQR(enh.data, w, h, { inversionAttempts: 'attemptBoth' });
-            if (code) lastAttemptLabel = 'ENH';
-        }
-
-        if (code && code.data) {
-            const cooldown = getRangeVal('cooldownSlider') * 1000;
-            const isDup = code.data === lastCode && (now - lastCodeTime) < cooldown;
-            if (!isDup) {
-                lastCode = code.data;
-                lastCodeTime = now;
-                onScanSuccess(code.data);
-            }
-        }
-
-        // Update attempt pill
-        $('attemptPill').textContent = lastAttemptLabel;
-        $('attemptPill').className = 'stat-pill' + (code ? ' good' : '');
+    // Attempt B: raw, inverted (white-on-dark)
+    if (!code) {
+        code = jsQR(raw.data, w, h, { inversionAttempts: 'onlyInvert' });
+        if (code) lastAttemptLabel = 'INV';
     }
 
-    animFrame = requestAnimationFrame(scanLoop);
+    // Attempt C: enhanced (contrast + threshold)
+    if (!code && $('enhToggle').checked) {
+        const enh = enhanceFrame(canvas);
+        code = jsQR(enh.data, w, h, { inversionAttempts: 'attemptBoth' });
+        if (code) lastAttemptLabel = 'ENH';
+    }
+
+    if (code && code.data) {
+        const cooldown = getRangeVal('cooldownSlider') * 1000;
+        const isDup = code.data === lastCode && (now - lastCodeTime) < cooldown;
+        if (!isDup) {
+            lastCode = code.data;
+            lastCodeTime = now;
+            onScanSuccess(code.data);
+        }
+    }
+
+    // Update attempt pill
+    $('attemptPill').textContent = lastAttemptLabel;
+    $('attemptPill').className = 'stat-pill' + (code ? ' good' : '');
 }
 
 function onScanSuccess(text) {
